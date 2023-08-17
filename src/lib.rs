@@ -1,4 +1,5 @@
 #![cfg_attr(not(any(doctest, test)), no_std)]
+#![doc = include_str!("../README.md")]
 
 /// Auxiliary types for the `Mutex` type
 pub mod mutex;
