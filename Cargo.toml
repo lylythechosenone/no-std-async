@@ -1,9 +1,11 @@
 [package]
 name = "no-std-async"
-version = "0.1.0"
+version = "1.0.0"
+description = "Async synchronization primitives for #[no_std] rust"
+license = "MIT"
+documentation = "https://docs.rs/no-std-async"
+repository = "https://github.com/lylythechosenone/no-std-async"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 pin-list = "0.1.0"
