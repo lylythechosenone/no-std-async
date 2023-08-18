@@ -117,7 +117,8 @@ impl Future for Acquire<'_> {
             return Poll::Ready(());
         }
 
-        if projected.node.is_initial() {
+        if !*projected.set {
+            *projected.set = true;
             lock.waiters
                 .cursor_back_mut()
                 .insert_after(projected.node, cx.waker().clone(), ());
