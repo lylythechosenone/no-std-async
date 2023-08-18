@@ -12,7 +12,7 @@ type PinListTypes = dyn pin_list::Types<
     Id = pin_list::id::Unchecked,
     Protected = Waker,
     Removed = (),
-    Unprotected = (),
+    Unprotected = usize,
 >;
 
 /// A type that asynchronously distributes "permits."
@@ -55,7 +55,6 @@ impl Semaphore {
             semaphore: self,
             n,
             node: pin_list::Node::new(),
-            set: false,
         }
     }
 
@@ -63,9 +62,13 @@ impl Semaphore {
     pub fn release(&self, n: usize) {
         let mut lock = self.inner.lock();
         lock.count += n;
-        if let Ok(waker) = lock.waiters.cursor_front_mut().remove_current(()) {
-            drop(lock);
-            waker.wake();
+        match lock.waiters.cursor_front_mut().unprotected().copied() {
+            Some(count) if lock.count >= count => {
+                let waker = lock.waiters.cursor_front_mut().remove_current(()).unwrap();
+                drop(lock);
+                waker.wake();
+            }
+            _ => {}
         }
     }
 
@@ -90,7 +93,6 @@ pub struct Acquire<'a> {
     n: usize,
     #[pin]
     node: pin_list::Node<PinListTypes>,
-    set: bool,
 }
 impl Future for Acquire<'_> {
     type Output = ();
@@ -121,17 +123,11 @@ impl Future for Acquire<'_> {
             return Poll::Ready(());
         }
 
-        if !*projected.set {
-            *projected.set = true;
-            lock.waiters
-                .cursor_back_mut()
-                .insert_after(projected.node, cx.waker().clone(), ());
-        } else {
-            // We've been woken, but not enough is ready for us yet. Keep waiting.
-            lock.waiters
-                .cursor_front_mut()
-                .insert_before(projected.node, cx.waker().clone(), ());
-        }
+        lock.waiters.cursor_back_mut().insert_after(
+            projected.node,
+            cx.waker().clone(),
+            *projected.n,
+        );
 
         Poll::Pending
     }
@@ -148,8 +144,8 @@ impl PinnedDrop for Acquire<'_> {
         let mut lock = projected.semaphore.inner.lock();
 
         match node.reset(&mut lock.waiters) {
-            (pin_list::NodeData::Linked(_waker), ()) => {} // We've been cancelled before ever being woken.
-            (pin_list::NodeData::Removed(()), ()) => {
+            (pin_list::NodeData::Linked(_waker), _) => {} // We've been cancelled before ever being woken.
+            (pin_list::NodeData::Removed(()), _) => {
                 // Oops, we were already woken! We need to wake the next task in line.
                 if let Ok(waker) = lock.waiters.cursor_front_mut().remove_current(()) {
                     drop(lock);
