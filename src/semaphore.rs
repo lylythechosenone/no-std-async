@@ -35,11 +35,11 @@ pub struct Semaphore {
     inner: Mutex<SemaphoreInner>,
 }
 impl Semaphore {
-    /// Creates a new [`Semaphore`] with the given maximum number of permits.
-    pub const fn new(max_count: usize) -> Self {
+    /// Creates a new [`Semaphore`] with the given initial number of permits.
+    pub const fn new(initial_count: usize) -> Self {
         Self {
             inner: Mutex::new(SemaphoreInner {
-                count: max_count,
+                count: initial_count,
                 waiters: PinList::new(unsafe { pin_list::id::Unchecked::new() }),
             }),
         }
