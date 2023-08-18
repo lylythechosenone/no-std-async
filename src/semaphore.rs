@@ -107,6 +107,13 @@ impl Future for Acquire<'_> {
 
         if lock.count >= *projected.n {
             lock.count -= *projected.n;
+            if lock.count > 0 {
+                // There's still more for others to take, give it to the next task in line.
+                if let Ok(waker) = lock.waiters.cursor_front_mut().remove_current(()) {
+                    drop(lock);
+                    waker.wake();
+                }
+            }
             return Poll::Ready(());
         }
 
