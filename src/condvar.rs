@@ -68,3 +68,32 @@ impl Condvar {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use core::time::Duration;
+    use std::thread;
+
+    use super::*;
+
+    // doctests test `notify_one` for us
+
+    #[test]
+    fn notify_all() {
+        static CONDVAR: Condvar = Condvar::new();
+
+        let task1 = thread::spawn(|| pollster::block_on(CONDVAR.wait()));
+        let task2 = thread::spawn(|| pollster::block_on(CONDVAR.wait()));
+        let task3 = thread::spawn(|| pollster::block_on(CONDVAR.wait()));
+
+        thread::sleep(Duration::from_millis(100)); // make sure all tasks are waiting
+
+        CONDVAR.notify_all();
+
+        thread::sleep(Duration::from_millis(100)); // time for everything to synchronize
+
+        assert!(task1.is_finished());
+        assert!(task2.is_finished());
+        assert!(task3.is_finished());
+    }
+}

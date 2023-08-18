@@ -49,10 +49,13 @@ impl Semaphore {
     /// These permits should be [`release`](Self::release)d later,
     /// or they will be permanently removed.
     pub fn acquire(&self, n: usize) -> Acquire<'_> {
+        #[cfg(test)]
+        println!("acquire({})", n);
         Acquire {
             semaphore: self,
             n,
             node: pin_list::Node::new(),
+            set: false,
         }
     }
 
@@ -87,6 +90,7 @@ pub struct Acquire<'a> {
     n: usize,
     #[pin]
     node: pin_list::Node<PinListTypes>,
+    set: bool,
 }
 impl Future for Acquire<'_> {
     type Output = ();
@@ -153,5 +157,39 @@ impl PinnedDrop for Acquire<'_> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::thread;
+
+    use super::*;
+
+    #[test]
+    fn semaphore() {
+        static SEMAPHORE: Semaphore = Semaphore::new(10);
+
+        let take_10 = thread::spawn(|| pollster::block_on(SEMAPHORE.acquire(10))); // should complete instantly
+        thread::sleep(std::time::Duration::from_millis(10));
+        assert!(take_10.is_finished());
+
+        let take_1 = thread::spawn(|| pollster::block_on(SEMAPHORE.acquire(1)));
+        thread::sleep(std::time::Duration::from_millis(10));
+        let take_30 = thread::spawn(|| pollster::block_on(SEMAPHORE.acquire(30)));
+        thread::sleep(std::time::Duration::from_millis(10));
+        let take_5 = thread::spawn(|| pollster::block_on(SEMAPHORE.acquire(5)));
+        thread::sleep(std::time::Duration::from_millis(10));
+
+        SEMAPHORE.release(30);
+        thread::sleep(std::time::Duration::from_millis(10));
+        assert!(take_1.is_finished());
+        assert!(!take_30.is_finished()); // we only have 29 now
+        assert!(!take_5.is_finished()); // take_30 waits at the start of the line and doesn't notify 5
+
+        SEMAPHORE.release(6);
+        thread::sleep(std::time::Duration::from_millis(10));
+        assert!(take_30.is_finished());
+        assert!(take_5.is_finished());
     }
 }
