@@ -56,7 +56,7 @@ impl<T> RwLock<T> {
         Self {
             data: UnsafeCell::new(data),
             semaphore: Semaphore::new(usize::MAX),
-            max_readers: 0,
+            max_readers: usize::MAX,
         }
     }
     /// Creates a new [`RwLock`] with the given data and maximum number of readers.
