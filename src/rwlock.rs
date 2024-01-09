@@ -53,14 +53,10 @@ pub struct RwLock<T> {
 impl<T> RwLock<T> {
     /// Creates a new [`RwLock`] with the given data.
     pub const fn new(data: T) -> Self {
-        Self {
-            data: UnsafeCell::new(data),
-            semaphore: Semaphore::new(usize::MAX),
-            max_readers: usize::MAX,
-        }
+        Self::with_max_readers(data, usize::MAX)
     }
     /// Creates a new [`RwLock`] with the given data and maximum number of readers.
-    pub fn with_max_readers(data: T, max_readers: usize) -> Self {
+    pub const fn with_max_readers(data: T, max_readers: usize) -> Self {
         Self {
             data: UnsafeCell::new(data),
             semaphore: Semaphore::new(max_readers),
