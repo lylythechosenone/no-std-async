@@ -1,6 +1,6 @@
 [package]
 name = "no-std-async"
-version = "1.1.0"
+version = "1.1.1"
 description = "Async synchronization primitives for #[no_std] rust"
 license = "MIT"
 documentation = "https://docs.rs/no-std-async"
