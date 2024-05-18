@@ -105,7 +105,7 @@ impl Future for Acquire<'_> {
             if let Err(e) = node.take_removed(&lock.waiters) {
                 // Someone has polled us again, but we haven't been woken yet.
                 // We update the waker, then go back to sleep.
-                *e.protected_mut(&mut projected.semaphore.inner.lock().waiters)
+                *e.protected_mut(&mut lock.waiters)
                     .unwrap() = cx.waker().clone();
                 return Poll::Pending;
             }
