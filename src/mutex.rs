@@ -64,6 +64,17 @@ impl<T> Mutex<T> {
         self.semaphore.acquire(1).await;
         Guard { mutex: self }
     }
+
+    /// Returns a mutable reference to the underlying data. Since this call borrows the [`Mutex`]
+    /// mutably, no locking needs to take place.
+    pub fn get_mut(&mut self) -> &mut T {
+        self.data.get_mut()
+    }
+
+    /// Consumes the [`Mutex`] and returns the underlying data.
+    pub fn into_inner(self) -> T {
+        self.data.into_inner()
+    }
 }
 
 unsafe impl<T: Send> Send for Mutex<T> {}
