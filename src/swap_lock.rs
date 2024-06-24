@@ -80,6 +80,18 @@ impl<T> SwapLock<T> {
     pub async fn write(&self) -> Guard<'_, T> {
         self.write.lock().await
     }
+
+    /// Returns a mutable reference to the underlying write data. Since this call borrows the
+    /// [`SwapLock`] mutably, no locking needs to take place. Note that this call does not sync the
+    /// [`SwapLock`].
+    pub fn get_mut(&mut self) -> &mut T {
+        self.write.get_mut()
+    }
+
+    /// Consumes the [`SwapLock`] and returns the underlying write data.
+    pub fn into_inner(self) -> T {
+        self.write.into_inner()
+    }
 }
 
 unsafe impl<T: Send> Send for SwapLock<T> {}
